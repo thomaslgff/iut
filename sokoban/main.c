@@ -56,7 +56,7 @@ char retirer_sokoban(char contenu_case);
 char afficher_sokoban(char contenu_case);
 char afficher_caisse(char contenu_case);
 char retirer_caisse(char contenu_case);
-void deplacer_sokoban(t_Plateau plateau, char touche, int *lig_soko, int *col_soko, char retourTouche);
+void deplacer_sokoban(t_Plateau plateau, char touche, int *lig_soko, int *col_soko, char *retourTouche);
 void trouver_sokoban(t_Plateau plateau, int *lig_soko, int *col_soko);
 bool gagner_partie(t_Plateau plateau);
 void afficher_abandon(t_Plateau plateau);
@@ -69,7 +69,7 @@ void conversion_retourtouche(char *retourTouche);
 int main() {
     char fichier[50];
     t_Plateau plateau, plateau_initial;
-    t_deplacements tableauDep[NB_D_MAX];
+    t_deplacements tableauDep;
     int nb_deplacements = 0, zoom = 1;
     int lig_soko = 0, col_soko = 0;
     bool en_cours = true, abandonner = false, gagner = false; 
@@ -146,7 +146,6 @@ int main() {
     if (gagner) {
         afficher_gagner(plateau, fichier, nb_deplacements, zoom);
     }
-
     return 0;
 }
 
@@ -275,7 +274,55 @@ char afficher_caisse(char contenu_case) {
 }
 
 /* gère un déplacement du Sokoban (avec ou sans caisse) */
-void deplacer_sokoban(t_Plateau plateau, char touche, int *lig_soko, int *col_soko, char *retourTouche) {
+void deplacer_sokoban(t_Plateau plateau, int *lig_soko, int *col_soko, t_deplacements tableauDep) {
+    int dlig = 0, dcol = 0;
+
+    switch (touche) {
+        case SOKOH: dlig = +1; break;
+        case SOKOB: dlig = 1; break;
+        case SOKOG: dcol = -1; break;
+        case SOKOD: dcol = 1; break;
+        default: return;
+    }
+
+    int lig_suiv = *lig_soko + dlig;
+    int col_suiv = *col_soko + dcol;
+    int lig_der = lig_suiv + dlig;
+    int col_der = col_suiv + dcol;
+
+    if (lig_suiv < 0 || lig_suiv >= NB_LIG || col_suiv < 0 || col_suiv >= NB_COL) return;
+
+    char case_suiv = plateau[lig_suiv][col_suiv];
+
+    if (case_suiv == MUR) return;
+
+    if (case_suiv == VIDE || case_suiv == CIBLE) {
+        plateau[*lig_soko][*col_soko] = retirer_sokoban(plateau[*lig_soko][*col_soko]);
+        plateau[lig_suiv][col_suiv] = afficher_sokoban(plateau[lig_suiv][col_suiv]);
+        *lig_soko = lig_suiv;
+        *col_soko = col_suiv;
+        return;
+    }
+
+    if (case_suiv == CAISSE || case_suiv == CAISSE_SUR_CIBLE) {
+        conversion_retourtouche(retourTouche);
+        if (lig_der < 0 || lig_der >= NB_LIG || col_der < 0 || col_der >= NB_COL) return;
+
+        char case_der = plateau[lig_der][col_der];
+
+        if (case_der == MUR || case_der == CAISSE || case_der == CAISSE_SUR_CIBLE) return;
+
+        plateau[lig_der][col_der] = afficher_caisse(case_der);
+        plateau[lig_suiv][col_suiv] = retirer_caisse(plateau[lig_suiv][col_suiv]);
+        plateau[*lig_soko][*col_soko] = retirer_sokoban(plateau[*lig_soko][*col_soko]);
+        plateau[lig_suiv][col_suiv] = afficher_sokoban(plateau[lig_suiv][col_suiv]);
+        *lig_soko = lig_suiv;
+        *col_soko = col_suiv;
+    }
+}
+
+
+void undo_deplacement(t_Plateau plateau, char touche, int *lig_soko, int *col_soko, char *retourTouche) {
     int dlig = 0, dcol = 0;
 
     switch (touche) {
@@ -306,7 +353,7 @@ void deplacer_sokoban(t_Plateau plateau, char touche, int *lig_soko, int *col_so
     }
 
     if (case_suiv == CAISSE || case_suiv == CAISSE_SUR_CIBLE) {
-        conversion_retourtouche(*retourTouche);
+        conversion_retourtouche(retourTouche);
         if (lig_der < 0 || lig_der >= NB_LIG || col_der < 0 || col_der >= NB_COL) return;
 
         char case_der = plateau[lig_der][col_der];
