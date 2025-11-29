@@ -1,0 +1,28 @@
+type structure {
+    entier: c_de1,
+    entier: c_de2,
+    entier: c_de3
+} t_3Des;
+
+
+fonction lance3Des() delivre t_Des{
+    t_3Des: res;
+    res.c_de1 := random(1, 6);
+    res.c_de2 := random(1, 6);
+    res.c_de3 := random(1, 6);
+
+    renvoie resultat;
+}
+
+ordonne(t_3Des res){
+    if(res.c_de1 < res.c_de2)[
+        echanger(res.c_de1, res.c_de2);
+    ]
+    if(res.c_de2 < res.c_de3){
+        echanger(res.c_de2, res.c_de3)
+        if(res.c_de1 < res.c_de2){
+            echanger(res.c_de1, res.c_de2)
+        }
+    }
+    return res;
+}
