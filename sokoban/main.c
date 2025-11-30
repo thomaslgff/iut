@@ -41,14 +41,14 @@ typedef char t_Plateau[NB_LIG][NB_COL];
 typedef char t_deplacements[NB_D_MAX];
 
 /* position initiale de Sokoban */
-int ligSoko_initial = 0;
-int colSoko_initial = 0;
+int ligSokoInitial = 0;
+int colSokoInitial = 0;
 
 /* ==== DECLARATION FONCTIONS / PROCEDURES ==== */
 
 int kb_hit();
 void charger_partie(t_Plateau plateau, char fichier[50]);
-void afficher_entete(char fichier[50], int nb_deplacements);
+void afficher_entete(char fichier[50], int nbDeplacements);
 void afficher_plateau(t_Plateau plateau, int zoom);
 void enregistrer_partie(t_Plateau plateau, char fichier[50]);
 void copier_plateau(t_Plateau destination, t_Plateau source);
@@ -60,20 +60,20 @@ void deplacer_sokoban(t_Plateau plateau, char touche, int *ligSoko, int *colSoko
 void trouver_sokoban(t_Plateau plateau, int *ligSoko, int *colSoko);
 bool gagner_partie(t_Plateau plateau);
 void afficher_abandon(t_Plateau plateau);
-bool afficher_recommencer(t_Plateau plateau, t_Plateau plateau_initial, int *nb_deplacements, int *ligSoko, int *colSoko);
-void afficher_gagner(t_Plateau plateau, char fichier[50], int nb_deplacements, int zoom);
+bool afficher_recommencer(t_Plateau plateau, t_Plateau plateauInitial, int *nbDeplacements, int *ligSoko, int *colSoko);
+void afficher_gagner(t_Plateau plateau, char fichier[50], int nbDeplacements, int zoom);
 void conversion_retourtouche(char *retourTouche);
 void undo_deplacement()
 
 /* ==== MAIN ==== */
 
-int main() {
+int main(){
     char fichier[50];
-    t_Plateau plateau, plateau_initial;
+    t_Plateau plateau, plateauInitial;
     t_deplacements tableauDep;
-    int nb_deplacements = 0, zoom = 1;
+    int nbDeplacements = 0, zoom = 1;
     int ligSoko = 0, colSoko = 0;
-    bool en_cours = true, abandonner = false, gagner = false; 
+    bool enCours = true, abandonner = false, gagner = false; 
     char touche = '\0';
     char retourTouche;
     
@@ -82,19 +82,19 @@ int main() {
     printf("nom fichier: ");
     scanf("%49s", fichier);
 
-    afficher_entete(fichier, nb_deplacements);
+    afficher_entete(fichier, nbDeplacements);
     charger_partie(plateau, fichier);
-    copier_plateau(plateau_initial, plateau);
+    copier_plateau(plateauInitial, plateau);
     trouver_sokoban(plateau, &ligSoko, &colSoko);
 
     /* mémorisation de la position initiale une seule fois */
-    ligSoko_initial = ligSoko;
-    colSoko_initial = colSoko;
+    ligSokoInitial = ligSoko;
+    colSokoInitial = colSoko;
 
     /* Boucle principale du jeu */
-    while (en_cours) {
+    while (enCours) {
         system("clear");
-        afficher_entete(fichier, nb_deplacements);
+        afficher_entete(fichier, nbDeplacements);
         afficher_plateau(plateau, zoom);
 
         /* attente d'une touche clavier */
@@ -110,7 +110,7 @@ int main() {
 
             /* on compte le déplacement seulement si on a bougé */
             if (lig_ancienne != ligSoko || col_ancienne != colSoko) {
-                nb_deplacements++;
+                nbDeplacements++;
                 for(int i = 0; i< NB_D_MAX; i++){
                     tableauDep[i] = retourTouche;
                 }
@@ -119,18 +119,18 @@ int main() {
                 /* test de victoire */
                 if (gagner_partie(plateau)) {
                     gagner = true;
-                    en_cours = false;
+                    enCours = false;
                 }
             }
         }
         /* abandon de la partie */
         else if (touche == ABANDONNER) {
             abandonner = true;
-            en_cours = false;
+            enCours = false;
         }
         /* recommencer depuis le début */
         else if (touche == RECOMMENCER) {
-            if (afficher_recommencer(plateau, plateau_initial, &nb_deplacements, &ligSoko, &colSoko)) {
+            if (afficher_recommencer(plateau, plateauInitial, &nbDeplacements, &ligSoko, &colSoko)) {
                 continue;
             }
         }
@@ -148,7 +148,7 @@ int main() {
         afficher_abandon(plateau);
     }
     if (gagner) {
-        afficher_gagner(plateau, fichier, nb_deplacements, zoom);
+        afficher_gagner(plateau, fichier, nbDeplacements, zoom);
     }
     return 0;
 }
@@ -217,11 +217,11 @@ void enregistrer_partie(t_Plateau plateau, char fichier[50]) {
 }
 
 /* affiche les infos de la partie (en-tête) */
-void afficher_entete(char fichier[50], int nb_deplacements) {
+void afficher_entete(char fichier[50], int nbDeplacements) {
     printf("Partie %s \n", fichier);
     printf("Q=Gauche | Z=Haut | S=Bas | D=Droite\n");
     printf("X=Abandonner | R=Recommencer\n");
-    printf("Nombre de déplacements : %d\n", nb_deplacements);
+    printf("Nombre de déplacements : %d\n", nbDeplacements);
 }
 
 /* affiche le plateau de jeu */
@@ -401,17 +401,17 @@ void afficher_abandon(t_Plateau plateau) {
 }
 
 /* demande si on recommence, remet le plateau et les compteurs */
-bool afficher_recommencer(t_Plateau plateau, t_Plateau plateau_initial, int *nb_deplacements, int *ligSoko, int *colSoko) {
+bool afficher_recommencer(t_Plateau plateau, t_Plateau plateauInitial, int *nbDeplacements, int *ligSoko, int *colSoko) {
     char rep;
 
     printf("Recommencer ? (o/n) : ");
     scanf(" %c", &rep);
 
     if (rep == OUI) {
-        copier_plateau(plateau, plateau_initial);
-        *nb_deplacements = 0;
-        *ligSoko = ligSoko_initial;
-        *colSoko = colSoko_initial;
+        copier_plateau(plateau, plateauInitial);
+        *nbDeplacements = 0;
+        *ligSoko = ligSokoInitial;
+        *colSoko = colSokoInitial;
         return true;
     }
 
@@ -419,9 +419,9 @@ bool afficher_recommencer(t_Plateau plateau, t_Plateau plateau_initial, int *nb_
 }
 
 /* affiche l'écran final de victoire avec le plateau */
-void afficher_gagner(t_Plateau plateau, char fichier[50], int nb_deplacements, int zoom) {
+void afficher_gagner(t_Plateau plateau, char fichier[50], int nbDeplacements, int zoom) {
     system("clear");
-    afficher_entete(fichier, nb_deplacements);
+    afficher_entete(fichier, nbDeplacements);
     afficher_plateau(plateau, zoom);
     printf("\nVICTOIRE !\n");
 }
