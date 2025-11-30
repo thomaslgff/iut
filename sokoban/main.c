@@ -63,7 +63,7 @@ void afficher_abandon(t_Plateau plateau);
 bool afficher_recommencer(t_Plateau plateau, t_Plateau plateauInitial, int *nbDeplacements, int *ligSoko, int *colSoko);
 void afficher_gagner(t_Plateau plateau, char fichier[50], int nbDeplacements, int zoom);
 void conversion_retourtouche(char *retourTouche);
-void undo_deplacement()
+void undo_deplacement(t_Plateau plateau, int *ligSoko, int *colSoko, t_deplacements tableauDep, int *i);
 
 /* ==== MAIN ==== */
 
@@ -73,6 +73,7 @@ int main(){
     t_deplacements tableauDep;
     int nbDeplacements = 0, zoom = 1;
     int ligSoko = 0, colSoko = 0;
+    int i = 0;
     bool enCours = true, abandonner = false, gagner = false; 
     char touche = '\0';
     char retourTouche;
@@ -111,10 +112,8 @@ int main(){
             /* on compte le déplacement seulement si on a bougé */
             if (lig_ancienne != ligSoko || col_ancienne != colSoko) {
                 nbDeplacements++;
-                for(int i = 0; i< NB_D_MAX; i++){
-                    tableauDep[i] = retourTouche;
-                }
-                
+                tableauDep[i] = retourTouche;
+                i++;
 
                 /* test de victoire */
                 if (gagner_partie(plateau)) {
@@ -135,7 +134,7 @@ int main(){
             }
         }
         else if(touche == UNDO){
-            undo_deplacement();
+            undo_deplacement(plateau, &ligSoko, &colSoko, tableauDep, &i);
         }
         else if (touche == ZOOMER && zoom < 3)
             zoom = zoom + 1;
@@ -278,10 +277,10 @@ char afficher_caisse(char contenu_case) {
 }
 
 /* gère un déplacement du Sokoban (avec ou sans caisse) */
-void undo_deplacement(t_Plateau plateau, int *ligSoko, int *colSoko, t_deplacements tableauDep) {
+void undo_deplacement(t_Plateau plateau, int *ligSoko, int *colSoko, t_deplacements tableauDep, int *i) {
     int dlig = 0, dcol = 0, signalCais = 0;
 
-    switch (tapleauDep[i]) {
+    switch (tableauDep[*i]) {
         case SOKOH: dlig = 1; signalCais = 0; break;
         case SOKOB: dlig = -1; signalCais = 0; break;
         case SOKOG: dcol = -1; signalCais = 0; break;
@@ -310,7 +309,7 @@ void undo_deplacement(t_Plateau plateau, int *ligSoko, int *colSoko, t_deplaceme
         plateau[ligCais][colCais] = retirer_caisse(caseCais);
         plateau[*ligSoko][*colSoko] = afficher_caisse(caseSoko);
     }
-    
+    (*i)--;    
 }
 
 
