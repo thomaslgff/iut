@@ -135,6 +135,7 @@ int main(){
         }
         else if(touche == UNDO){
             undo_deplacement(plateau, &ligSoko, &colSoko, tableauDep, &i);
+            tableauDep[i+1] = 0;
         }
         else if (touche == ZOOMER && zoom < 3)
             zoom = zoom + 1;
@@ -218,8 +219,9 @@ void enregistrer_partie(t_Plateau plateau, char fichier[50]) {
 /* affiche les infos de la partie (en-tête) */
 void afficher_entete(char fichier[50], int nbDeplacements) {
     printf("Partie %s \n", fichier);
-    printf("Q=Gauche | Z=Haut | S=Bas | D=Droite\n");
-    printf("X=Abandonner | R=Recommencer\n");
+    printf("q = Gauche | z = Haut | s = Bas | d = Droite\n");
+    printf("x = Abandonner | r = Recommencer | u = undo (annuler déplacement)\n");
+    printf("+ = Zoomer | - = Dezoomer\n");
     printf("Nombre de déplacements : %d\n", nbDeplacements);
 }
 
