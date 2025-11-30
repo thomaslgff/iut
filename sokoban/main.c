@@ -63,6 +63,7 @@ void afficher_abandon(t_Plateau plateau);
 bool afficher_recommencer(t_Plateau plateau, t_Plateau plateau_initial, int *nb_deplacements, int *ligSoko, int *colSoko);
 void afficher_gagner(t_Plateau plateau, char fichier[50], int nb_deplacements, int zoom);
 void conversion_retourtouche(char *retourTouche);
+void undo_deplacement()
 
 /* ==== MAIN ==== */
 
@@ -132,6 +133,9 @@ int main() {
             if (afficher_recommencer(plateau, plateau_initial, &nb_deplacements, &ligSoko, &colSoko)) {
                 continue;
             }
+        }
+        else if(touche == UNDO){
+            undo_deplacement();
         }
         else if (touche == ZOOMER && zoom < 3)
             zoom = zoom + 1;
@@ -275,50 +279,38 @@ char afficher_caisse(char contenu_case) {
 
 /* gère un déplacement du Sokoban (avec ou sans caisse) */
 void undo_deplacement(t_Plateau plateau, int *ligSoko, int *colSoko, t_deplacements tableauDep) {
-    int dlig = 0, dcol = 0;
+    int dlig = 0, dcol = 0, signalCais = 0;
 
     switch (tapleauDep[i]) {
-        case SOKOH: dlig = +1; break;
-        case SOKOB: dlig = 1; break;
-        case SOKOG: dcol = -1; break;
-        case SOKOD: dcol = 1; break;
+        case SOKOH: dlig = 1; signalCais = 0; break;
+        case SOKOB: dlig = -1; signalCais = 0; break;
+        case SOKOG: dcol = -1; signalCais = 0; break;
+        case SOKOD: dcol = 1; signalCais = 0; break;
+        case SOKOCH: dlig = 1; signalCais = 1; break;
+        case SOKOCB: dlig = -1; signalCais = 1; break;
+        case SOKOCG: dcol = -1; signalCais = 1; break;
+        case SOKOCD: dcol = 1; signalCais = 1; break;
         default: return;
     }
 
-    int lig_suiv = *ligSoko + dlig;
-    int col_suiv = *colSoko + dcol;
-    int lig_der = lig_suiv + dlig;
-    int col_der = col_suiv + dcol;
+    int ligPre = *ligSoko + dlig;
+    int colPre = *colSoko + dcol;
+    int ligCais = *colSoko - dlig;
+    int colCais = *ligSoko - dcol;
 
-    if (lig_suiv < 0 || lig_suiv >= NB_LIG || col_suiv < 0 || col_suiv >= NB_COL) return;
+    char casePre = plateau[ligPre][colPre];
+    char caseSoko = plateau[*ligSoko][*ligSoko];
+    char caseCais = plateau[ligCais][colCais];
 
-    char case_suiv = plateau[lig_suiv][col_suiv];
 
-    if (case_suiv == MUR) return;
+    plateau[*ligSoko][*colSoko] = retirer_sokoban(caseSoko);
+    plateau[ligPre][colPre] = afficher_sokoban(casePre);
 
-    if (case_suiv == VIDE || case_suiv == CIBLE) {
-        plateau[*ligSoko][*colSoko] = retirer_sokoban(plateau[*ligSoko][*colSoko]);
-        plateau[lig_suiv][col_suiv] = afficher_sokoban(plateau[lig_suiv][col_suiv]);
-        *ligSoko = lig_suiv;
-        *colSoko = col_suiv;
-        return;
+    if(signalCais == 1){
+        plateau[ligCais][colCais] = retirer_caisse(caseCais);
+        plateau[*ligSoko][*colSoko] = afficher_caisse(caseSoko);
     }
-
-    if (case_suiv == CAISSE || case_suiv == CAISSE_SUR_CIBLE) {
-        conversion_retourtouche(retourTouche);
-        if (lig_der < 0 || lig_der >= NB_LIG || col_der < 0 || col_der >= NB_COL) return;
-
-        char case_der = plateau[lig_der][col_der];
-
-        if (case_der == MUR || case_der == CAISSE || case_der == CAISSE_SUR_CIBLE) return;
-
-        plateau[lig_der][col_der] = afficher_caisse(case_der);
-        plateau[lig_suiv][col_suiv] = retirer_caisse(plateau[lig_suiv][col_suiv]);
-        plateau[*ligSoko][*colSoko] = retirer_sokoban(plateau[*ligSoko][*colSoko]);
-        plateau[lig_suiv][col_suiv] = afficher_sokoban(plateau[lig_suiv][col_suiv]);
-        *ligSoko = lig_suiv;
-        *colSoko = col_suiv;
-    }
+    
 }
 
 
@@ -326,8 +318,8 @@ void deplacer_sokoban(t_Plateau plateau, char touche, int *ligSoko, int *colSoko
     int dlig = 0, dcol = 0;
 
     switch (touche) {
-        case HAUT: dlig = 1; *retourTouche = SOKOH; break;
-        case BAS: dlig = -1; *retourTouche = SOKOB; break;
+        case HAUT: dlig = -1; *retourTouche = SOKOH; break;
+        case BAS: dlig = 1; *retourTouche = SOKOB; break;
         case GAUCHE: dcol = 1; *retourTouche = SOKOG; break;
         case DROITE: dcol = -1; *retourTouche = SOKOD; break;
         default: return;
