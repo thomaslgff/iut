@@ -38,7 +38,7 @@
 #define SOKOCD 'D'
 
 typedef char t_Plateau[NB_LIG][NB_COL];
-typedef char t_deplacements[NB_D_MAX];
+typedef char t_tabDeplacement[NB_D_MAX];
 
 /* position initiale de Sokoban */
 int ligSokoInitial = 0;
@@ -52,34 +52,30 @@ void afficher_entete(char fichier[50], int nbDeplacements);
 void afficher_plateau(t_Plateau plateau, int zoom);
 void enregistrer_partie(t_Plateau plateau, char fichier[50]);
 void copier_plateau(t_Plateau destination, t_Plateau source);
-char retirer_sokoban(char contenu_case);
-char afficher_sokoban(char contenu_case);
-char afficher_caisse(char contenu_case);
-char retirer_caisse(char contenu_case);
+char retirer_sokoban(char contenuCase);
+char afficher_sokoban(char contenuCase);
+char afficher_caisse(char contenuCase);
+char retirer_caisse(char contenuCase);
 void deplacer_sokoban(t_Plateau plateau, char touche, int *ligSoko, int *colSoko, char *retourTouche);
 void trouver_sokoban(t_Plateau plateau, int *ligSoko, int *colSoko);
 bool gagner_partie(t_Plateau plateau);
-void afficher_abandon(t_Plateau plateau);
+void afficher_abandon(t_Plateau plateau, t_tabDeplacement t, int nb);
 bool afficher_recommencer(t_Plateau plateau, t_Plateau plateauInitial, int *nbDeplacements, int *ligSoko, int *colSoko);
-void afficher_gagner(t_Plateau plateau, char fichier[50], int nbDeplacements, int zoom);
-void conversion_retourtouche(char *retourTouche);
-void undo_deplacement(t_Plateau plateau, int *ligSoko, int *colSoko, t_deplacements tableauDep, int *i);
+void afficher_gagner(t_Plateau plateau, char fichier[50], int nb, int zoom, t_tabDeplacement t);
+void conversion_retourTouche(char *retourTouche);
+void undo_deplacement(t_Plateau plateau, int *ligSoko, int *colSoko, t_tabDeplacement tableauDep, int *i);
+void enregistrerDeplacements(t_tabDeplacement t, int nb, char fic[]);
+
 
 /* ==== MAIN ==== */
 
-int main(){
-    char fichier[50];
+int main() {
+    char fichier[50], touche = '\0', retourTouche = 0;
     t_Plateau plateau, plateauInitial;
-    t_deplacements tableauDep;
-    int nbDeplacements = 0, zoom = 1;
-    int ligSoko = 0, colSoko = 0;
-    int i = 0;
-    bool enCours = true, abandonner = false, gagner = false; 
-    char touche = '\0';
-    char retourTouche;
-    
+    t_tabDeplacement tableauDep;
+    int nbDeplacements = 0, zoom = 1, ligSoko = 0, colSoko = 0, i = 0;
+    bool enCours = true, abandonner = false, gagner = false;
 
-    /* Chargement de la partie */
     printf("nom fichier: ");
     scanf("%49s", fichier);
 
@@ -92,72 +88,53 @@ int main(){
     ligSokoInitial = ligSoko;
     colSokoInitial = colSoko;
 
-    /* Boucle principale du jeu */
     while (enCours) {
         system("clear");
         afficher_entete(fichier, nbDeplacements);
         afficher_plateau(plateau, zoom);
 
-        /* attente d'une touche clavier */
         while (kb_hit() == 0) {}
         touche = getchar();
 
-        /* gestion des déplacements */
         if (touche == HAUT || touche == BAS || touche == GAUCHE || touche == DROITE) {
-            int lig_ancienne = ligSoko;
-            int col_ancienne = colSoko;
-
+            int ligAncienne = ligSoko, colAncienne = colSoko;
             deplacer_sokoban(plateau, touche, &ligSoko, &colSoko, &retourTouche);
 
-            /* on compte le déplacement seulement si on a bougé */
-            if (lig_ancienne != ligSoko || col_ancienne != colSoko) {
+            if (ligAncienne != ligSoko || colAncienne != colSoko) {
                 nbDeplacements++;
-                tableauDep[i] = retourTouche;
-                i++;
-
-                /* test de victoire */
-                if (gagner_partie(plateau)) {
-                    gagner = true;
-                    enCours = false;
-                }
+                tableauDep[i++] = retourTouche;
+                if (gagner_partie(plateau)) { gagner = true; enCours = false; }
             }
-        }
-        /* abandon de la partie */
-        else if (touche == ABANDONNER) {
-            abandonner = true;
-            enCours = false;
-        }
-        /* recommencer depuis le début */
-        else if (touche == RECOMMENCER) {
-            if (afficher_recommencer(plateau, plateauInitial, &nbDeplacements, &ligSoko, &colSoko)) {
-                continue;
+        } else if (touche == ABANDONNER) {
+            abandonner = true; enCours = false;
+        } else if (touche == RECOMMENCER) {
+            if (afficher_recommencer(plateau, plateauInitial, &nbDeplacements, &ligSoko, &colSoko)) { i = 0; continue; }
+        } else if (touche == UNDO) {
+            if (nbDeplacements > 0 && i > 0) {
+                undo_deplacement(plateau, &ligSoko, &colSoko, tableauDep, &i);
+                nbDeplacements--;
             }
+        } else if (touche == ZOOMER && zoom < 3) {
+            zoom++;
+        } else if (touche == DEZOOMER && zoom > 1) {
+            zoom--;
         }
-        else if(touche == UNDO){
-            undo_deplacement(plateau, &ligSoko, &colSoko, tableauDep, &i);
-            tableauDep[i+1] = 0;
-        }
-        else if (touche == ZOOMER && zoom < 3)
-            zoom = zoom + 1;
-        else if (touche == DEZOOMER && zoom > 1)
-            zoom = zoom - 1;
     }
 
-    /* gestion de fin de partie */
-    if (abandonner) {
-        afficher_abandon(plateau);
-    }
-    if (gagner) {
-        afficher_gagner(plateau, fichier, nbDeplacements, zoom);
-    }
+    if (abandonner)
+        afficher_abandon(plateau, tableauDep, nbDeplacements);
+    if (gagner)
+        afficher_gagner(plateau, fichier, nbDeplacements, zoom, tableauDep);
+
     return 0;
 }
+
 
 /* ==== FONCTIONS ==== */
 
 /* renvoie 1 si une touche est disponible, 0 sinon */
 int kb_hit() {
-    int un_caractere = 0;
+    int unCaractere = 0;
     struct termios oldt, newt;
     int ch, oldf;
 
@@ -175,10 +152,10 @@ int kb_hit() {
 
     if (ch != EOF) {
         ungetc(ch, stdin);
-        un_caractere = 1;
+        unCaractere = 1;
     }
 
-    return un_caractere;
+    return unCaractere;
 }
 
 /* charge un plateau depuis un fichier texte */
@@ -227,10 +204,10 @@ void afficher_entete(char fichier[50], int nbDeplacements) {
 
 /* affiche le plateau de jeu */
 void afficher_plateau(t_Plateau plateau, int zoom) {
-    for (int lig = 0; lig < NB_LIG*zoom; lig++) {
+    for (int lig = 0; lig < NB_LIG * zoom; lig++) {
         printf("\n");
-        for (int col = 0; col < NB_COL*zoom; col++) {
-            char c = plateau[lig/zoom][col/zoom];
+        for (int col = 0; col < NB_COL * zoom; col++) {
+            char c = plateau[lig / zoom][col / zoom];
 
             /* on remplace les états "sur cible" par les symboles normaux */
             if (c == SOKOBAN_SUR_CIBLE) c = SOKOBAN;
@@ -251,114 +228,142 @@ void copier_plateau(t_Plateau destination, t_Plateau source) {
 }
 
 /* enlève le Sokoban d'une case */
-char retirer_sokoban(char contenu_case) {
-    if (contenu_case == SOKOBAN_SUR_CIBLE) return CIBLE;
-    if (contenu_case == SOKOBAN) return VIDE;
-    return contenu_case;
+char retirer_sokoban(char contenuCase) {
+    if (contenuCase == SOKOBAN_SUR_CIBLE) return CIBLE;
+    if (contenuCase == SOKOBAN) return VIDE;
+    return contenuCase;
 }
 
 /* place le Sokoban sur une case */
-char afficher_sokoban(char contenu_case) {
-    if (contenu_case == CIBLE) return SOKOBAN_SUR_CIBLE;
-    if (contenu_case == VIDE) return SOKOBAN;
-    return contenu_case;
+char afficher_sokoban(char contenuCase) {
+    if (contenuCase == CIBLE) return SOKOBAN_SUR_CIBLE;
+    if (contenuCase == VIDE) return SOKOBAN;
+    return contenuCase;
 }
 
 /* enlève une caisse d'une case */
-char retirer_caisse(char contenu_case) {
-    if (contenu_case == CAISSE_SUR_CIBLE) return CIBLE;
-    if (contenu_case == CAISSE) return VIDE;
-    return contenu_case;
+char retirer_caisse(char contenuCase) {
+    if (contenuCase == CAISSE_SUR_CIBLE) return CIBLE;
+    if (contenuCase == CAISSE) return VIDE;
+    return contenuCase;
 }
 
 /* place une caisse sur une case */
-char afficher_caisse(char contenu_case) {
-    if (contenu_case == CIBLE) return CAISSE_SUR_CIBLE;
-    if (contenu_case == VIDE) return CAISSE;
-    return contenu_case;
+char afficher_caisse(char contenuCase) {
+    if (contenuCase == CIBLE) return CAISSE_SUR_CIBLE;
+    if (contenuCase == VIDE) return CAISSE;
+    return contenuCase;
 }
 
-/* gère un déplacement du Sokoban (avec ou sans caisse) */
-void undo_deplacement(t_Plateau plateau, int *ligSoko, int *colSoko, t_deplacements tableauDep, int *i) {
-    int dlig = 0, dcol = 0, signalCais = 0;
+/* UNDO : annule le dernier déplacement */
+void undo_deplacement(t_Plateau plateau, int *ligSoko, int *colSoko, t_tabDeplacement tableauDep, int *i) {
+    // *i = indice de la prochaine case libre dans tableauDep
+    if (*i <= 0) {
+        return; // rien à annuler
+    }
 
-    switch (tableauDep[*i]) {
-        case SOKOH: dlig = 1; signalCais = 0; break;
-        case SOKOB: dlig = -1; signalCais = 0; break;
-        case SOKOG: dcol = -1; signalCais = 0; break;
-        case SOKOD: dcol = 1; signalCais = 0; break;
-        case SOKOCH: dlig = 1; signalCais = 1; break;
-        case SOKOCB: dlig = -1; signalCais = 1; break;
-        case SOKOCG: dcol = -1; signalCais = 1; break;
-        case SOKOCD: dcol = 1; signalCais = 1; break;
+    (*i)--; // on revient sur le dernier coup
+    char code = tableauDep[*i];
+
+    int dlig = 0, dcol = 0;
+    int signalCaisse = 0;
+
+    // dlig/dcol = direction de l'UNDO (inverse du coup initial)
+    switch (code) {
+        case SOKOH:  dlig =  1; signalCaisse = 0; break;
+        case SOKOB:  dlig = -1; signalCaisse = 0; break;
+        case SOKOG:  dcol =  1; signalCaisse = 0; break;
+        case SOKOD:  dcol = -1; signalCaisse = 0; break;
+
+        case SOKOCH: dlig =  1; signalCaisse = 1; break;
+        case SOKOCB: dlig = -1; signalCaisse = 1; break;
+        case SOKOCG: dcol =  1; signalCaisse = 1; break;
+        case SOKOCD: dcol = -1; signalCaisse = 1; break;
+
         default: return;
     }
 
-    int ligPre = *ligSoko + dlig;
-    int colPre = *colSoko + dcol;
-    int ligCais = *colSoko - dlig;
-    int colCais = *ligSoko - dcol;
+    int ligAct = *ligSoko;
+    int colAct = *colSoko;
 
-    char casePre = plateau[ligPre][colPre];
-    char caseSoko = plateau[*ligSoko][*ligSoko];
-    char caseCais = plateau[ligCais][colCais];
+    int ligPre = ligAct + dlig; // ancienne position de Soko
+    int colPre = colAct + dcol;
 
+    char caseSokoAct = plateau[ligAct][colAct];
+    char fondSousSoko = retirer_sokoban(caseSokoAct);
 
-    plateau[*ligSoko][*colSoko] = retirer_sokoban(caseSoko);
-    plateau[ligPre][colPre] = afficher_sokoban(casePre);
+    if (!signalCaisse) {
+        // UNDO sans caisse
+        plateau[ligAct][colAct] = fondSousSoko;
+        plateau[ligPre][colPre] = afficher_sokoban(plateau[ligPre][colPre]);
 
-    if(signalCais == 1){
-        plateau[ligCais][colCais] = retirer_caisse(caseCais);
-        plateau[*ligSoko][*colSoko] = afficher_caisse(caseSoko);
+        *ligSoko = ligPre;
+        *colSoko = colPre;
+    } else {
+        // UNDO avec caisse
+        int ligCaisseApres = ligAct - dlig; // position actuelle de la caisse
+        int colCaisseApres = colAct - dcol;
+
+        char caseCaisseApres = plateau[ligCaisseApres][colCaisseApres];
+        char fondSousCaisseApres = retirer_caisse(caseCaisseApres);
+
+        plateau[ligCaisseApres][colCaisseApres] = fondSousCaisseApres;         // 1. enlever la caisse de sa position actuelle
+        plateau[ligAct][colAct] = fondSousSoko;        // 2. enlever Sokoban de sa position actuelle
+        plateau[ligPre][colPre] = afficher_sokoban(plateau[ligPre][colPre]);        // 3. remettre Sokoban à son ancienne position
+        plateau[ligAct][colAct] = afficher_caisse(plateau[ligAct][colAct]);        // 4. remettre la caisse sur l'ancienne case de Sokoban (après le coup initial)
+
+        *ligSoko = ligPre;
+        *colSoko = colPre;
     }
-    (*i)--;    
 }
 
-
+/* gère un déplacement du Sokoban (avec ou sans caisse) */
 void deplacer_sokoban(t_Plateau plateau, char touche, int *ligSoko, int *colSoko, char *retourTouche) {
     int dlig = 0, dcol = 0;
 
     switch (touche) {
-        case HAUT: dlig = -1; *retourTouche = SOKOH; break;
-        case BAS: dlig = 1; *retourTouche = SOKOB; break;
-        case GAUCHE: dcol = 1; *retourTouche = SOKOG; break;
-        case DROITE: dcol = -1; *retourTouche = SOKOD; break;
+        case HAUT:   dlig = -1; *retourTouche = SOKOH; break;
+        case BAS:    dlig =  1; *retourTouche = SOKOB; break;
+        case GAUCHE: dcol = -1; *retourTouche = SOKOG; break;
+        case DROITE: dcol =  1; *retourTouche = SOKOD; break;
         default: return;
     }
 
-    int lig_suiv = *ligSoko + dlig;
-    int col_suiv = *colSoko + dcol;
-    int lig_der = lig_suiv + dlig;
-    int col_der = col_suiv + dcol;
+    int ligSuiv = *ligSoko + dlig;
+    int colSuiv = *colSoko + dcol;
+    int ligDer  = ligSuiv + dlig;
+    int colDer  = colSuiv + dcol;
 
-    if (lig_suiv < 0 || lig_suiv >= NB_LIG || col_suiv < 0 || col_suiv >= NB_COL) return;
+    if (ligSuiv < 0 || ligSuiv >= NB_LIG || colSuiv < 0 || colSuiv >= NB_COL) return;
 
-    char case_suiv = plateau[lig_suiv][col_suiv];
+    char caseSuiv = plateau[ligSuiv][colSuiv];
 
-    if (case_suiv == MUR) return;
+    if (caseSuiv == MUR) return;
 
-    if (case_suiv == VIDE || case_suiv == CIBLE) {
+    if (caseSuiv == VIDE || caseSuiv == CIBLE) {
         plateau[*ligSoko][*colSoko] = retirer_sokoban(plateau[*ligSoko][*colSoko]);
-        plateau[lig_suiv][col_suiv] = afficher_sokoban(plateau[lig_suiv][col_suiv]);
-        *ligSoko = lig_suiv;
-        *colSoko = col_suiv;
+        plateau[ligSuiv][colSuiv] = afficher_sokoban(plateau[ligSuiv][colSuiv]);
+        *ligSoko = ligSuiv;
+        *colSoko = colSuiv;
         return;
     }
 
-    if (case_suiv == CAISSE || case_suiv == CAISSE_SUR_CIBLE) {
-        conversion_retourtouche(*retourTouche);
-        if (lig_der < 0 || lig_der >= NB_LIG || col_der < 0 || col_der >= NB_COL) return;
+    if (caseSuiv == CAISSE || caseSuiv == CAISSE_SUR_CIBLE) {
+        if (ligDer < 0 || ligDer >= NB_LIG || colDer < 0 || colDer >= NB_COL) return;
 
-        char case_der = plateau[lig_der][col_der];
+        char caseDer = plateau[ligDer][colDer];
 
-        if (case_der == MUR || case_der == CAISSE || case_der == CAISSE_SUR_CIBLE) return;
+        if (caseDer == MUR || caseDer == CAISSE || caseDer == CAISSE_SUR_CIBLE) return;
 
-        plateau[lig_der][col_der] = afficher_caisse(case_der);
-        plateau[lig_suiv][col_suiv] = retirer_caisse(plateau[lig_suiv][col_suiv]);
+        /* on marque que ce déplacement poussait une caisse */
+        conversion_retourTouche(retourTouche);
+
+        plateau[ligDer][colDer]   = afficher_caisse(caseDer);
+        plateau[ligSuiv][colSuiv] = retirer_caisse(plateau[ligSuiv][colSuiv]);
         plateau[*ligSoko][*colSoko] = retirer_sokoban(plateau[*ligSoko][*colSoko]);
-        plateau[lig_suiv][col_suiv] = afficher_sokoban(plateau[lig_suiv][col_suiv]);
-        *ligSoko = lig_suiv;
-        *colSoko = col_suiv;
+        plateau[ligSuiv][colSuiv] = afficher_sokoban(plateau[ligSuiv][colSuiv]);
+        *ligSoko = ligSuiv;
+        *colSoko = colSuiv;
     }
 }
 
@@ -387,8 +392,9 @@ bool gagner_partie(t_Plateau plateau) {
 }
 
 /* gère l'abandon : propose de sauvegarder */
-void afficher_abandon(t_Plateau plateau) {
-    char fichier[50], rep;
+void afficher_abandon(t_Plateau plateau, t_tabDeplacement t, int nb) {
+    char fichier[50], fic[50], rep;
+
 
     printf("Partie abandonnée\n");
     printf("Sauvegarder ? (o/n) : ");
@@ -399,6 +405,16 @@ void afficher_abandon(t_Plateau plateau) {
         scanf("%49s", fichier);
         enregistrer_partie(plateau, fichier);
     }
+
+    printf("enregistrer déplacements dans un fichier .dep ? (o/n)");
+    scanf(" %c", &rep);
+
+    if (rep == OUI) {
+        printf("Nom fichier (.dep) : ");
+        scanf("%49s", fic);
+        enregistrerDeplacements(t, nb, fic);
+    }
+
 }
 
 /* demande si on recommence, remet le plateau et les compteurs */
@@ -420,18 +436,40 @@ bool afficher_recommencer(t_Plateau plateau, t_Plateau plateauInitial, int *nbDe
 }
 
 /* affiche l'écran final de victoire avec le plateau */
-void afficher_gagner(t_Plateau plateau, char fichier[50], int nbDeplacements, int zoom) {
+void afficher_gagner(t_Plateau plateau, char fichier[50], int nb, int zoom, t_tabDeplacement t) {
+    char fic[50], rep;
+
     system("clear");
-    afficher_entete(fichier, nbDeplacements);
+    afficher_entete(fichier, nb);
     afficher_plateau(plateau, zoom);
     printf("\nVICTOIRE !\n");
+
+    printf("enregistrer déplacements dans un fichier .dep ? (o/n)");
+    scanf(" %c", &rep);
+
+    if (rep == OUI) {
+        printf("Nom fichier (.dep) : ");
+        scanf("%49s", fic);
+        enregistrerDeplacements(t, nb, fic);
+    }
 }
-void conversion_retourtouche(char *retourTouche){
+
+void conversion_retourTouche(char *retourTouche) {
     switch (*retourTouche) {
         case SOKOH: *retourTouche = SOKOCH; break;
         case SOKOB: *retourTouche = SOKOCB; break;
         case SOKOG: *retourTouche = SOKOCG; break;
         case SOKOD: *retourTouche = SOKOCD; break;
-        default: return;
+        default: break;
     }
 }
+
+
+void enregistrerDeplacements(t_tabDeplacement t, int nb, char fic[]){
+    FILE * f;
+
+    f = fopen(fic, "w");
+    fwrite(t,sizeof(char), nb, f);
+    fclose(f);
+}
+
