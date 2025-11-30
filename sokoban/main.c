@@ -84,8 +84,7 @@ int main() {
     copier_plateau(plateauInitial, plateau);
     trouver_sokoban(plateau, &ligSoko, &colSoko);
 
-    /* mémorisation de la position initiale une seule fois */
-    ligSokoInitial = ligSoko;
+    ligSokoInitial = ligSoko;  /* mémorisation de la position initiale une seule fois */
     colSokoInitial = colSoko;
 
     while (enCours) {
@@ -93,34 +92,34 @@ int main() {
         afficher_entete(fichier, nbDeplacements);
         afficher_plateau(plateau, zoom);
 
-        while (kb_hit() == 0) {}
+        while (kb_hit() == 0) {} // attendre qu'une touche soit pressée
         touche = getchar();
-
+        // DETERMINATION DES ACTIONS EN FONCTION DE LA TOUCHE PRESSEE
         if (touche == HAUT || touche == BAS || touche == GAUCHE || touche == DROITE) {
             int ligAncienne = ligSoko, colAncienne = colSoko;
-            deplacer_sokoban(plateau, touche, &ligSoko, &colSoko, &retourTouche);
+            deplacer_sokoban(plateau, touche, &ligSoko, &colSoko, &retourTouche); // GESTION DES DEPLACEMENTS
 
-            if (ligAncienne != ligSoko || colAncienne != colSoko) {
+            if (ligAncienne != ligSoko || colAncienne != colSoko) { // ON AUNGMENTE LE NB DE DEPLACEMENT SI SOKOBAN CHANGE DE CASE
                 nbDeplacements++;
                 tableauDep[i++] = retourTouche;
-                if (gagner_partie(plateau)) { gagner = true; enCours = false; }
+                if (gagner_partie(plateau)) { gagner = true; enCours = false; } // VERIFIE SI LA PARTIE EST GAGNEE
             }
         } else if (touche == ABANDONNER) {
-            abandonner = true; enCours = false;
+            abandonner = true; enCours = false; // ABANDON
         } else if (touche == RECOMMENCER) {
-            if (afficher_recommencer(plateau, plateauInitial, &nbDeplacements, &ligSoko, &colSoko)) { i = 0; continue; }
+            if (afficher_recommencer(plateau, plateauInitial, &nbDeplacements, &ligSoko, &colSoko)) { i = 0; continue; } // RECOMMENCEMMENT
         } else if (touche == UNDO) {
             if (nbDeplacements > 0 && i > 0) {
-                undo_deplacement(plateau, &ligSoko, &colSoko, tableauDep, &i);
+                undo_deplacement(plateau, &ligSoko, &colSoko, tableauDep, &i); // UNDO (annuler deplacement)
                 nbDeplacements--;
             }
-        } else if (touche == ZOOMER && zoom < 3) {
+        } else if (touche == ZOOMER && zoom < 3) { // ZOOMER
             zoom++;
-        } else if (touche == DEZOOMER && zoom > 1) {
-            zoom--;
+        } else if (touche == DEZOOMER && zoom > 1) { // DEZOOMER
+            zoom--; 
         }
     }
-
+    //affichage de fin de partie
     if (abandonner)
         afficher_abandon(plateau, tableauDep, nbDeplacements);
     if (gagner)
@@ -463,7 +462,6 @@ void conversion_retourTouche(char *retourTouche) {
         default: break;
     }
 }
-
 
 void enregistrerDeplacements(t_tabDeplacement t, int nb, char fic[]){
     FILE * f;
